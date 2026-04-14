@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "prompt-manager",
-  "title": "Prompt manager",
+  "title": "Prompt Manager",
   "description": "Save, organize, and instantly reuse your AI prompts with lightning-fast access inside Raycast.",
   "icon": "extension-icon.png",
   "license": "MIT",
@@ -10,13 +10,14 @@
       "name": "save-prompt",
       "title": "Save Prompt",
       "description": "Quickly save a prompt with title, tags, and template variables for future use across AI tools.",
-      "mode": "no-view",
+      "mode": "view",
       "subtitle": "Store a new prompt for quick reuse"
     }
   ],
   "dependencies": {
     "@raycast/api": "^1.103.0",
-    "@raycast/utils": "^2.2.1"
+    "@raycast/utils": "^2.2.1",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@raycast/eslint-config": "^2.0.4",

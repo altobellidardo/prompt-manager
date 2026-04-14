@@ -82,9 +82,9 @@ export default function Command() {
                   if (
                     await confirmAlert({
                       title: "Delete Prompt",
-                      message: "¿Estás seguro de que quieres borrar este prompt?",
+                      message: "Are you sure you want to delete this prompt?",
                       primaryAction: {
-                        title: "Borrar",
+                        title: "Delete",
                         style: Alert.ActionStyle.Destructive,
                       },
                     })

@@ -8,14 +8,25 @@ import {
   AI,
   environment,
   Icon,
+  Detail,
+  Color,
 } from "@raycast/api";
 import { usePromptStore } from "./store/usePromptStore";
 import { useState } from "react";
 
+type GenerationStep = "input" | "generating" | "result";
+
+interface GeneratedPrompt {
+  title: string;
+  content: string;
+  tags: string[];
+}
+
 export default function Command() {
   const { pop } = useNavigation();
   const addPrompt = usePromptStore((state) => state.addPrompt);
-  const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState<GenerationStep>("input");
+  const [generatedPrompt, setGeneratedPrompt] = useState<GeneratedPrompt | null>(null);
 
   async function handleSubmit(values: { intent: string }) {
     if (!values.intent) {
@@ -36,11 +47,7 @@ export default function Command() {
       return;
     }
 
-    setIsLoading(true);
-    const toast = await showToast({
-      style: Toast.Style.Animated,
-      title: "Generating prompt...",
-    });
+    setStep("generating");
 
     try {
       const prompt = `You are an expert prompt engineer. The user wants a prompt for: "${values.intent}".
@@ -53,14 +60,13 @@ export default function Command() {
       Return ONLY the JSON. Avoid markdown formatting blocks.`;
 
       const response = await AI.ask(prompt);
-      
-      // Robust JSON extraction
+
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error("Could not find a valid JSON response from AI");
       }
 
-      const generated = JSON.parse(jsonMatch[0]);
+      const generated: GeneratedPrompt = JSON.parse(jsonMatch[0]);
 
       if (!generated.title || !generated.content) {
         throw new Error("AI generated an incomplete prompt");
@@ -72,39 +78,87 @@ export default function Command() {
         tags: generated.tags || [],
       });
 
-      toast.style = Toast.Style.Success;
-      toast.title = "Prompt Generated and Saved";
-      pop();
+      setGeneratedPrompt(generated);
+      setStep("result");
     } catch (error) {
-      toast.style = Toast.Style.Failure;
-      toast.title = "Failed to generate prompt";
-      toast.description = error instanceof Error ? error.message : String(error);
-    } finally {
-      setIsLoading(false);
+      showToast({
+        style: Toast.Style.Failure,
+        title: "Failed to generate prompt",
+        description: error instanceof Error ? error.message : String(error),
+      });
+      setStep("input");
     }
+  }
+
+  if (step === "generating") {
+    const generatingMarkdown = `
+# ✨ Creating Magic...
+
+Raycast AI is analyzing your request to design a professional prompt template.
+We are optimizing the context, variables, and tags to make it perfect for you.
+
+*Please wait a moment while we polish the details.*
+    `;
+    return <Detail isLoading={true} markdown={generatingMarkdown} />;
+  }
+
+  if (step === "result" && generatedPrompt) {
+    const resultMarkdown = `
+# ✅ Prompt Ready to Use
+
+Click **Copy Content** or press **Enter** to take it to your clipboard. 
+You can exit this view by pressing **Esc** or **Backspace**.
+
+---
+
+### Generated Template:
+
+\`\`\`text
+${generatedPrompt.content}
+\`\`\`
+    `;
+
+    return (
+      <Detail
+        markdown={resultMarkdown}
+        navigationTitle="AI Result"
+        metadata={
+          <Detail.Metadata>
+            <Detail.Metadata.Label title="Title" text={generatedPrompt.title} icon={Icon.Text} />
+            <Detail.Metadata.TagList title="Tags">
+              {generatedPrompt.tags?.map((tag) => (
+                <Detail.Metadata.TagList.Item key={tag} text={tag} color={Color.Blue} />
+              )) || <Detail.Metadata.TagList.Item text="No tags" />}
+            </Detail.Metadata.TagList>
+            <Detail.Metadata.Separator />
+            <Detail.Metadata.Label title="Status" text="Saved to Library" icon={{ source: Icon.CheckCircle, color: Color.Green }} />
+          </Detail.Metadata>
+        }
+        actions={
+          <ActionPanel>
+            <Action.CopyToClipboard title="Copy Content" content={generatedPrompt.content} />
+            <Action title="Generate Another" icon={Icon.Plus} onAction={() => setStep("input")} shortcut={{ modifiers: ["cmd"], key: "n" }} />
+            <Action title="Close" icon={Icon.XMarkCircle} onAction={pop} />
+          </ActionPanel>
+        }
+      />
+    );
   }
 
   return (
     <Form
-      isLoading={isLoading}
       actions={
         <ActionPanel>
-          <Action.SubmitForm 
-            title="Generate with AI" 
-            icon={Icon.MagicWand} 
-            onSubmit={handleSubmit} 
-          />
+          <Action.SubmitForm title="Generate with AI" icon={Icon.MagicWand} onSubmit={handleSubmit} />
         </ActionPanel>
       }
     >
-      <Form.Description 
-        text="Raycast AI will help you craft a high-quality prompt template including a title, content, and relevant tags." 
-      />
-      <Form.TextArea 
-        id="intent" 
-        title="What should this prompt do?" 
-        placeholder="e.g. A prompt to help me refactor complex React components into smaller functional components" 
-        info="Be descriptive for better results."
+      <Form.Description text="Describe the purpose of your prompt. Raycast AI will design an optimized template with automatic variables and tags." />
+      <Form.TextArea
+        id="intent"
+        title="Prompt Intent"
+        placeholder="e.g. I need a prompt to analyze Node.js error logs and suggest solutions based on StackOverflow."
+        info="The more descriptive you are, the better the AI result will be."
       />
     </Form>
   );

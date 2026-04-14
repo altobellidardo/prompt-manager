@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, StateStorage, createJSONStorage } from "zustand/middleware";
 import { LocalStorage } from "@raycast/api";
-import { PromptStore } from "../types";
+import { PromptStore, CreatePromptValues } from "../types";
 
 const raycastStorage: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
@@ -22,7 +22,7 @@ export const usePromptStore = create<PromptStore>()(
       prompts: [],
       isHydrated: false,
       setHydrated: (state: boolean) => set({ isHydrated: state }),
-      addPrompt: (promptData) =>
+      addPrompt: (promptData: CreatePromptValues) =>
         set((state) => ({
           prompts: [
             ...state.prompts,
@@ -32,6 +32,12 @@ export const usePromptStore = create<PromptStore>()(
               createdAt: Date.now(),
             },
           ],
+        })),
+      updatePrompt: (id, promptData) =>
+        set((state) => ({
+          prompts: state.prompts.map((p) =>
+            p.id === id ? { ...p, ...promptData } : p
+          ),
         })),
       removePrompt: (id) =>
         set((state) => ({
@@ -44,6 +50,6 @@ export const usePromptStore = create<PromptStore>()(
       onRehydrateStorage: () => (state) => {
         state?.setHydrated(true);
       },
-    },
-  ),
+    }
+  )
 );

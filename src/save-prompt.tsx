@@ -1,52 +1,105 @@
-import { Action, ActionPanel, List, Icon } from "@raycast/api";
+import {
+  Action,
+  ActionPanel,
+  Form,
+  useNavigation,
+  showToast,
+  Toast,
+  Icon,
+} from "@raycast/api";
 import { usePromptStore } from "./store/usePromptStore";
-import CreatePromptForm from "./components/CreatePromptForm";
+import { Prompt } from "./types";
 
-export default function Command() {
-  const { prompts, removePrompt, isHydrated } = usePromptStore();
+export default function Command({ prompt }: { prompt?: Prompt }) {
+  const { pop } = useNavigation();
+  const { addPrompt, updatePrompt } = usePromptStore();
+
+  function handleSubmit(values: {
+    title: string;
+    content: string;
+    tags: string;
+  }) {
+    if (!values.title || !values.content) {
+      showToast({
+        style: Toast.Style.Failure,
+        title: "Validation Error",
+        description: "Title and Content are required",
+      });
+      return;
+    }
+
+    const tagsArray = values.tags
+      ? values.tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag !== "")
+      : [];
+
+    if (prompt) {
+      updatePrompt(prompt.id, {
+        title: values.title,
+        content: values.content,
+        tags: tagsArray,
+      });
+      showToast({
+        style: Toast.Style.Success,
+        title: "Prompt Updated",
+      });
+    } else {
+      addPrompt({
+        title: values.title,
+        content: values.content,
+        tags: tagsArray,
+      });
+      showToast({
+        style: Toast.Style.Success,
+        title: "Prompt Saved",
+      });
+    }
+
+    pop();
+  }
 
   return (
-    <List isLoading={!isHydrated} searchBarPlaceholder="Search prompts...">
-      <List.EmptyView
-        title="No prompts yet"
-        description="Save your first prompt to get started!"
-        actions={
-          <ActionPanel>
-            <Action.Push
-              title="Create New Prompt"
-              icon={Icon.Plus}
-              target={<CreatePromptForm />}
-            />
-          </ActionPanel>
+    <Form
+      actions={
+        <ActionPanel>
+          <Action.SubmitForm
+            title={prompt ? "Update Prompt" : "Save Prompt"}
+            icon={prompt ? Icon.Checkmark : Icon.Plus}
+            onSubmit={handleSubmit}
+          />
+        </ActionPanel>
+      }
+    >
+      <Form.Description
+        text={
+          prompt
+            ? "Update your existing prompt template."
+            : "Create a new prompt template to reuse later with AI tools."
         }
       />
-
-      {prompts.map((prompt) => (
-        <List.Item
-          key={prompt.id}
-          title={prompt.title}
-          subtitle={prompt.tags?.join(", ")}
-          actions={
-            <ActionPanel>
-              <Action.CopyToClipboard
-                title="Copy Content"
-                content={prompt.content}
-              />
-              <Action.Push
-                title="Create New Prompt"
-                icon={Icon.Plus}
-                target={<CreatePromptForm />}
-              />
-              <Action.SubmitForm
-                title="Delete Prompt"
-                icon={Icon.Trash}
-                onSubmit={() => removePrompt(prompt.id)}
-                shortcut={{ modifiers: ["ctrl"], key: "x" }}
-              />
-            </ActionPanel>
-          }
-        />
-      ))}
-    </List>
+      <Form.TextField
+        id="title"
+        title="Title"
+        placeholder="e.g. Code Refactor"
+        defaultValue={prompt?.title}
+        info="A short descriptive name for your prompt."
+      />
+      <Form.TextArea
+        id="content"
+        title="Content"
+        placeholder="e.g. Refactor this {{language}} code: {{code}}"
+        defaultValue={prompt?.content}
+        info="The actual prompt text. You can use {{brackets}} for variables."
+      />
+      <Form.TextField
+        id="tags"
+        title="Tags"
+        placeholder="e.g. coding, refactor"
+        defaultValue={prompt?.tags?.join(", ")}
+        info="Separate tags with commas."
+      />
+    </Form>
   );
 }

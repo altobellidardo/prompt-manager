@@ -9,9 +9,20 @@
     {
       "name": "save-prompt",
       "title": "Save Prompt",
-      "description": "Quickly save a prompt with title, tags, and template variables for future use across AI tools.",
-      "mode": "view",
-      "subtitle": "Store a new prompt for quick reuse"
+      "description": "Create a new prompt manually.",
+      "mode": "view"
+    },
+    {
+      "name": "view-prompts",
+      "title": "View Prompts",
+      "description": "List all your saved prompts.",
+      "mode": "view"
+    },
+    {
+      "name": "generate-prompt",
+      "title": "Generate Prompt",
+      "description": "Generate a prompt using Raycast AI.",
+      "mode": "view"
     }
   ],
   "dependencies": {
